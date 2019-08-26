@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
-        id="cordova-plugin-bluetooth-printer"
+        id="cordova-plugin-sicu"
         version="0.0.1-dev">
 
    <name>BluetoothPrinter</name>
    <description>A cordova plugin for bluetooth printer for android platform, which support text printing and POS printing.</description>
 
-   <repo>https://github.com/srehanuddin/Cordova-Plugin-Bluetooth-Printer</repo>
+   <repo>https://github.com/EDcasa/cordova-plugin-sicu</repo>
    <license>Apache 2.0</license>
-   <keywords>cordova, bluetooth, printer, pos, text, barcode, image</keywords>
+   <keywords>cordova, bluetooth, printer, text, image</keywords>
 
-   <author>Syed Rehanuddin</author>
+   <author>David Casa</author>
 
    <!-- cordova -->
    <engines>
@@ -32,6 +32,8 @@
 
       <config-file target="AndroidManifest.xml" parent="/*">
          <uses-permission android:name="android.permission.BLUETOOTH" />
+         <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+         <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
       </config-file>
 
       <source-file src="src/android/BluetoothPrinter.java" target-dir="src/com/ru/cordova/printer/bluetooth" />

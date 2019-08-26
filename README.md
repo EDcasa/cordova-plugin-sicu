@@ -10,7 +10,7 @@ If you want modified this plugin is based in sdk bixolon
 Using the Cordova CLI and NPM, run:
 
 ```
-cordova plugin add git@bitbucket.org:EDcasa/cordova-plugin-bixolon.git
+cordova plugin add https://github.com/EDcasa/cordova-plugin-sicu.git
 ```
 
 # Usage

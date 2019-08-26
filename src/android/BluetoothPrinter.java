@@ -150,9 +150,9 @@ public class BluetoothPrinter extends CordovaPlugin {
   }
 
   public void printImageBixolon(final Context context, String namePrint, String addressPrint, String pathImage) {
-    String path = Environment.getExternalStorageDirectory().toString() + imageName;
+    String path = Environment.getExternalStorageDirectory().toString() + pathImage;
     this.context = context;
-    if (start(this.context, printName, addressName)) {
+    if (start(this.context, namePrint, addressPrint)) {
       if (openPrinter()) {
         InputStream is = null;
         try {
@@ -162,7 +162,6 @@ public class BluetoothPrinter extends CordovaPlugin {
           buffer.put((byte) compress);
           buffer.put((byte) 0x00);
           posPrinter.printBitmap(buffer.getInt(0), path, posPrinter.getRecLineWidth(), POSPrinterConst.PTR_BM_LEFT);
-          callbackContext.success("Activity print");
         } catch (JposException e) {
           callbackContext.error(e.getMessage().toString() + " " + e.toString());
           e.printStackTrace();
@@ -178,8 +177,6 @@ public class BluetoothPrinter extends CordovaPlugin {
         }
         closePrinter();
       }
-    } else {
-      callbackContext.error("Activity print");
     }
   }
 

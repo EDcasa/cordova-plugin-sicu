@@ -149,10 +149,10 @@ public class BluetoothPrinter extends CordovaPlugin {
     return true;
   }
 
-  public void printImageBixolon(final Context context, String imageName, String printName,CallbackContext callbackContext) {
+  public void printImageBixolon(final Context context, String namePrint, String addressPrint, String pathImage) {
     String path = Environment.getExternalStorageDirectory().toString() + imageName;
     this.context = context;
-    if (start(this.context, callbackContext)) {
+    if (start(this.context, printName, addressName)) {
       if (openPrinter()) {
         InputStream is = null;
         try {

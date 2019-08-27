@@ -1,4 +1,4 @@
-# Cordova-Plugin-Bluetooth-Printer
+# Cordova-Plugin-Sicu
 A cordova plugin for bluetooth printer for android platform, which support text printing and image printing. This plugin is specific por sicu app
 If you want modified this plugin is based in sdk bixolon
 

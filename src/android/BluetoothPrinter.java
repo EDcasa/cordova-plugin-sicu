@@ -194,7 +194,7 @@ public class BluetoothPrinter extends CordovaPlugin {
         String ESC = new String(new byte[] { 0x1b, 0x7c });
         String LF = "\n";
 
-        posPrinter.setCharacterEncoding(BXLConst.CS_1252_LATIN1);
+        posPrinter.setCharacterEncoding(BXLConst.CE_UTF8);
         posPrinter.printNormal(POSPrinterConst.PTR_S_RECEIPT, content + "\n");
 
       } catch (JposException e) {

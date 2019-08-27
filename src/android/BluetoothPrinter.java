@@ -94,7 +94,7 @@ public class BluetoothPrinter extends CordovaPlugin {
       String namePrint = args.getString(0);
       String addressPrint = args.getString(1);
       String pathImage = args.getString(2);
-      int width = args.getString(2);
+      int width = args.getInt(3);
       printImageBixolon(context,namePrint, addressPrint, pathImage, width);
       return true;
     } else if (action.equals("printText")) {

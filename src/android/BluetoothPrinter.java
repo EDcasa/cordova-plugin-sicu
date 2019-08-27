@@ -163,7 +163,7 @@ public class BluetoothPrinter extends CordovaPlugin {
           buffer.put((byte) compress);
           buffer.put((byte) 0x00);
           Log.v("PRINT",path);
-          posPrinter.printBitmap(buffer.getInt(0), path, width , POSPrinterConst.PTR_BM_LEFT);
+          posPrinter.printBitmap(buffer.getInt(0), path, width , POSPrinterConst.PTR_BM_CENTER);
         } catch (JposException e) {
           e.printStackTrace();
           Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();

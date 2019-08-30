@@ -95,14 +95,14 @@ public class BluetoothPrinter extends CordovaPlugin {
       String addressPrint = args.getString(1);
       String pathImage = args.getString(2);
       int width = args.getInt(3);
-      printImageBixolon(context,namePrint, addressPrint, pathImage, width);
+      printImageBixolon(context,namePrint, addressPrint, pathImage, width, callbackContext);
       return true;
     } else if (action.equals("printText")) {
       Context context = this.cordova.getActivity().getApplicationContext();
       String namePrint = args.getString(0);
       String addressPrint = args.getString(1);
       String content = args.getString(2);
-      print(context,namePrint, addressPrint, content);
+      print(context,namePrint, addressPrint, content, callbackContext);
       return true;
     }
     return false;
@@ -114,8 +114,6 @@ public class BluetoothPrinter extends CordovaPlugin {
 
   public boolean start(final Context context, String name, String address) {
 
-    // String name = "SICU-151";
-    // String address = "74:F0:7D:E6:29:F6";
     this.context = context;
 
     bxlConfigLoader = new BXLConfigLoader(context);
@@ -138,7 +136,7 @@ public class BluetoothPrinter extends CordovaPlugin {
     }
 
     try {
-      logicalName = setProductName("SICU-151");
+      logicalName = setProductName(name);
       bxlConfigLoader.addEntry(logicalName, BXLConfigLoader.DEVICE_CATEGORY_POS_PRINTER, logicalName,
           BXLConfigLoader.DEVICE_BUS_BLUETOOTH, address);
 
@@ -150,11 +148,11 @@ public class BluetoothPrinter extends CordovaPlugin {
     return true;
   }
 
-  public void printImageBixolon(final Context context, String namePrint, String addressPrint, String pathImage, int width) {
+  public void printImageBixolon(final Context context, String namePrint, String addressPrint, String pathImage, int width, CallbackContext callbackContext) {
     String path = Environment.getExternalStorageDirectory().toString() + pathImage;
     this.context = context;
     if (start(this.context, namePrint, addressPrint)) {
-      if (openPrinter()) {
+      if (openPrinter(callbackContext)) {
         InputStream is = null;
         try {
           ByteBuffer buffer = ByteBuffer.allocate(4);
@@ -181,7 +179,7 @@ public class BluetoothPrinter extends CordovaPlugin {
     }
   }
 
-  public void print(final Context context,  String name, String address, String content) {
+  public void print(final Context context,  String name, String address, String content,CallbackContext callbackContext) {
 
     this.context = context;
     if (start(context, name, address)) {
@@ -199,6 +197,7 @@ public class BluetoothPrinter extends CordovaPlugin {
 
       } catch (JposException e) {
         e.printStackTrace();
+        callbackContext.error("Verfica el estado de tu impresora, o que esta se encuentre encendida");
       } finally {
         try {
           posPrinter.close();
@@ -216,7 +215,7 @@ public class BluetoothPrinter extends CordovaPlugin {
     return productName;
   }
 
-  private boolean openPrinter() {
+  private boolean openPrinter( CallbackContext callbackContext ) {
     try {
       posPrinter.open(logicalName);
       posPrinter.claim(0);
@@ -224,7 +223,9 @@ public class BluetoothPrinter extends CordovaPlugin {
       return true;
     } catch (JposException e) {
       e.printStackTrace();
+      posPrinter.close();
 
+      callbackContext.error("Verfica el estado de tu impresora, o que esta se encuentre encendida");
       try {
         posPrinter.close();
       } catch (JposException e1) {

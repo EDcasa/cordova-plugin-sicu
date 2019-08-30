@@ -223,8 +223,6 @@ public class BluetoothPrinter extends CordovaPlugin {
       return true;
     } catch (JposException e) {
       e.printStackTrace();
-      posPrinter.close();
-
       callbackContext.error("Verfica el estado de tu impresora, o que esta se encuentre encendida");
       try {
         posPrinter.close();

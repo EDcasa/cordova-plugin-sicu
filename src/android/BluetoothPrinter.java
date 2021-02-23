@@ -61,7 +61,7 @@ import jpos.events.StatusUpdateEvent;
 import jpos.events.StatusUpdateListener;
 import android.os.Environment;
 
-public class BluetoothPrinter extends CordovaPlugin {
+public class BluetoothPrinter extends CordovaPlugin{
 
   private static final String LOG_TAG = "BluetoothPrinter";
   BluetoothAdapter mBluetoothAdapter;
@@ -89,21 +89,42 @@ public class BluetoothPrinter extends CordovaPlugin {
 
   @Override
   public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-    if (action.equals("printImage")) {
+        if (action.equals("printImage")) {
       Context context = this.cordova.getActivity().getApplicationContext();
       String namePrint = args.getString(0);
       String addressPrint = args.getString(1);
       String pathImage = args.getString(2);
       int width = args.getInt(3);
-      printImageBixolon(context,namePrint, addressPrint, pathImage, width, callbackContext);
-      return true;
+      try{
+        cordova.getActivity().runOnUiThread(new Runnable() {
+          public void run() {
+            printImageBixolon(context,namePrint, addressPrint, pathImage, width, callbackContext);
+            callbackContext.success("SUCCESS-PRT");
+          }
+
+        });
+        return true;
+      }catch(Exception e){
+        callbackContext.error("DISCONECTED PRINT");
+        return false;
+      }
     } else if (action.equals("printText")) {
       Context context = this.cordova.getActivity().getApplicationContext();
       String namePrint = args.getString(0);
       String addressPrint = args.getString(1);
       String content = args.getString(2);
-      print(context,namePrint, addressPrint, content, callbackContext);
-      return true;
+      try{
+          cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+              print(context,namePrint, addressPrint, content, callbackContext);
+              callbackContext.success("SUCCESS-PRTEXT2");// Thread-safe.
+            }
+          });
+          return true;
+        }catch(Exception e){
+      callbackContext.error("DISCONECTED PRINT");
+      return false;
+    }
     }
     return false;
   }
@@ -122,6 +143,7 @@ public class BluetoothPrinter extends CordovaPlugin {
     } catch (Exception e) {
       e.printStackTrace();
       bxlConfigLoader.newFile();
+      return false;
     }
     posPrinter = new POSPrinter(context);
 
@@ -139,7 +161,6 @@ public class BluetoothPrinter extends CordovaPlugin {
       logicalName = setProductName(name);
       bxlConfigLoader.addEntry(logicalName, BXLConfigLoader.DEVICE_CATEGORY_POS_PRINTER, logicalName,
           BXLConfigLoader.DEVICE_BUS_BLUETOOTH, address);
-
       bxlConfigLoader.saveFile();
     } catch (Exception e) {
       e.printStackTrace();
@@ -162,6 +183,7 @@ public class BluetoothPrinter extends CordovaPlugin {
           buffer.put((byte) 0x00);
           Log.v("PRINT",path);
           posPrinter.printBitmap(buffer.getInt(0), path, width , POSPrinterConst.PTR_BM_CENTER);
+          callbackContext.success("SUCCESS-PRT");
         } catch (JposException e) {
           e.printStackTrace();
           Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -169,12 +191,16 @@ public class BluetoothPrinter extends CordovaPlugin {
           if (is != null) {
             try {
               is.close();
+              callbackContext.success("SUCCESS-PRT");
             } catch (IOException e) {
               e.printStackTrace();
             }
           }
         }
         closePrinter();
+      }else{
+        Toast.makeText(context, "Verifique el estado de la impresora", Toast.LENGTH_SHORT).show();
+        callbackContext.error("ERR_PRT");
       }
     }
   }
@@ -183,21 +209,20 @@ public class BluetoothPrinter extends CordovaPlugin {
 
     this.context = context;
     if (start(context, name, address)) {
-
       try {
         posPrinter.open(logicalName);
         posPrinter.claim(0);
         posPrinter.setDeviceEnabled(true);
-
         String ESC = new String(new byte[] { 0x1b,0x74,0x10 });
         //String LF = "\n";
 
         //posPrinter.setCharacterEncoding(BXLConst.CE_ASCII);
         posPrinter.printNormal(POSPrinterConst.PTR_S_RECEIPT,ESC+content + "\n");
+       callbackContext.success("EXITOSO");
 
       } catch (JposException e) {
         e.printStackTrace();
-        callbackContext.error("Verfica el estado de tu impresora, o que esta se encuentre encendida");
+        callbackContext.error("aqui el error");
       } finally {
         try {
           posPrinter.close();
@@ -220,17 +245,19 @@ public class BluetoothPrinter extends CordovaPlugin {
       posPrinter.open(logicalName);
       posPrinter.claim(0);
       posPrinter.setDeviceEnabled(true);
-      return true;
     } catch (JposException e) {
       e.printStackTrace();
-      callbackContext.error("Verfica el estado de tu impresora, o que esta se encuentre encendida");
       try {
         posPrinter.close();
+        Toast.makeText(context, "Verifique el estado de la impresora", Toast.LENGTH_SHORT).show();
+        callbackContext.error("ERR_PRT");
+        return false;
       } catch (JposException e1) {
         e1.printStackTrace();
+        return false;
       }
     }
-    return false;
+    return true;
   }
 
   private void closePrinter() {

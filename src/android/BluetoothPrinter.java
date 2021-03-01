@@ -30,6 +30,7 @@ import android.graphics.Paint;
 import android.graphics.Bitmap.Config;
 import android.util.Xml.Encoding;
 import android.util.Base64;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,10 +45,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.Toast;
 import android.util.Log;
+
 import com.bxl.BXLConst;
 import com.bxl.config.editor.BXLConfigLoader;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
 import jpos.JposConst;
 import jpos.JposException;
 import jpos.POSPrinter;
@@ -59,212 +63,209 @@ import jpos.events.OutputCompleteEvent;
 import jpos.events.OutputCompleteListener;
 import jpos.events.StatusUpdateEvent;
 import jpos.events.StatusUpdateListener;
+
 import android.os.Environment;
 
-public class BluetoothPrinter extends CordovaPlugin{
+public class BluetoothPrinter extends CordovaPlugin {
 
-  private static final String LOG_TAG = "BluetoothPrinter";
-  BluetoothAdapter mBluetoothAdapter;
-  BluetoothSocket mmSocket;
-  BluetoothDevice mmDevice;
-  OutputStream mmOutputStream;
-  InputStream mmInputStream;
-  Thread workerThread;
-  byte[] readBuffer;
-  int readBufferPosition;
-  int counter;
-  volatile boolean stopWorker;
-  Bitmap bitmap;
+    private static final String LOG_TAG = "BluetoothPrinter";
+    BluetoothAdapter mBluetoothAdapter;
+    BluetoothSocket mmSocket;
+    BluetoothDevice mmDevice;
+    OutputStream mmOutputStream;
+    InputStream mmInputStream;
+    Thread workerThread;
+    byte[] readBuffer;
+    int readBufferPosition;
+    int counter;
+    volatile boolean stopWorker;
+    Bitmap bitmap;
 
-  private BXLConfigLoader bxlConfigLoader;
-  private POSPrinter posPrinter;
-  private String logicalName;
-  Context context;
+    private BXLConfigLoader bxlConfigLoader;
+    private POSPrinter posPrinter;
+    private String logicalName;
+    Context context;
 
-  private int brightness = 80;
-  private int compress = 3;
+    private int brightness = 80;
+    private int compress = 3;
 
-  public BluetoothPrinter() {
-  }
+    public BluetoothPrinter() {
+    }
 
-  @Override
-  public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if (action.equals("printImage")) {
-      Context context = this.cordova.getActivity().getApplicationContext();
-      String namePrint = args.getString(0);
-      String addressPrint = args.getString(1);
-      String pathImage = args.getString(2);
-      int width = args.getInt(3);
-      try{
-        cordova.getActivity().runOnUiThread(new Runnable() {
-          public void run() {
-            printImageBixolon(context,namePrint, addressPrint, pathImage, width, callbackContext);
-            callbackContext.success("SUCCESS-PRT");
-          }
-
-        });
-        return true;
-      }catch(Exception e){
-        callbackContext.error("DISCONECTED PRINT");
-        return false;
-      }
-    } else if (action.equals("printText")) {
-      Context context = this.cordova.getActivity().getApplicationContext();
-      String namePrint = args.getString(0);
-      String addressPrint = args.getString(1);
-      String content = args.getString(2);
-      try{
-          cordova.getThreadPool().execute(new Runnable() {
+    @Override
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+      if (action.equals("printImage")) {
+        Context context = this.cordova.getActivity().getApplicationContext();
+        String namePrint = args.getString(0);
+        String addressPrint = args.getString(1);
+        String pathImage = args.getString(2);
+        int width = args.getInt(3);
+        try {
+          cordova.getActivity().runOnUiThread(new Runnable() {
             public void run() {
-              print(context,namePrint, addressPrint, content, callbackContext);
-              callbackContext.success("SUCCESS-PRTEXT2");// Thread-safe.
+              printImageBixolon(context, namePrint, addressPrint, pathImage, width, callbackContext);
+              callbackContext.success("SUCCESS-PRT");
+            }
+
+          });
+          return true;
+        } catch (Exception e) {
+          callbackContext.error("DISCONECTED PRINT");
+          return false;
+        }
+      } else if (action.equals("printText")) {
+        Context context = this.cordova.getActivity().getApplicationContext();
+        String namePrint = args.getString(0);
+        String addressPrint = args.getString(1);
+        String content = args.getString(2);
+        try {
+            cordova.getActivity().runOnUiThread(new Runnable() {
+            public void run() {
+              print(context, namePrint, addressPrint, content, callbackContext);
+                callbackContext.success("SUCCESS-PRT");
             }
           });
           return true;
-        }catch(Exception e){
-      callbackContext.error("DISCONECTED PRINT");
-      return false;
-    }
-    }
-    return false;
-  }
+        } catch (Exception e) {
+          callbackContext.error("DISCONECTED PRINT");
+          return false;
+        }
 
-  /**
-   * Functions of bixolon
-   */
-
-  public boolean start(final Context context, String name, String address) {
-
-    this.context = context;
-
-    bxlConfigLoader = new BXLConfigLoader(context);
-    try {
-      bxlConfigLoader.openFile();
-    } catch (Exception e) {
-      e.printStackTrace();
-      bxlConfigLoader.newFile();
-      return false;
-    }
-    posPrinter = new POSPrinter(context);
-
-    try {
-      for (Object entry : bxlConfigLoader.getEntries()) {
-        JposEntry jposEntry = (JposEntry) entry;
-        bxlConfigLoader.removeEntry(jposEntry.getLogicalName());
       }
-    } catch (Exception e) {
-      e.printStackTrace();
       return false;
+
     }
 
-    try {
-      logicalName = setProductName(name);
-      bxlConfigLoader.addEntry(logicalName, BXLConfigLoader.DEVICE_CATEGORY_POS_PRINTER, logicalName,
-          BXLConfigLoader.DEVICE_BUS_BLUETOOTH, address);
-      bxlConfigLoader.saveFile();
-    } catch (Exception e) {
-      e.printStackTrace();
-      return false;
-    }
-    return true;
-  }
+    /**
+     * Functions of bixolon
+     */
 
-  public void printImageBixolon(final Context context, String namePrint, String addressPrint, String pathImage, int width, CallbackContext callbackContext) {
-    String path = Environment.getExternalStorageDirectory().toString() + pathImage;
-    this.context = context;
-    if (start(this.context, namePrint, addressPrint)) {
-      if (openPrinter(callbackContext)) {
-        InputStream is = null;
+    public boolean start(final Context context, String name, String address) {
+
+        this.context = context;
+
+        bxlConfigLoader = new BXLConfigLoader(context);
         try {
-          ByteBuffer buffer = ByteBuffer.allocate(4);
-          buffer.put((byte) POSPrinterConst.PTR_S_RECEIPT);
-          buffer.put((byte) brightness);
-          buffer.put((byte) compress);
-          buffer.put((byte) 0x00);
-          Log.v("PRINT",path);
-          posPrinter.printBitmap(buffer.getInt(0), path, width , POSPrinterConst.PTR_BM_CENTER);
-          callbackContext.success("SUCCESS-PRT");
-        } catch (JposException e) {
-          e.printStackTrace();
-          Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
-        } finally {
-          if (is != null) {
-            try {
-              is.close();
-              callbackContext.success("SUCCESS-PRT");
-            } catch (IOException e) {
-              e.printStackTrace();
+            bxlConfigLoader.openFile();
+        } catch (Exception e) {
+            e.printStackTrace();
+            bxlConfigLoader.newFile();
+        }
+        posPrinter = new POSPrinter(context);
+
+        try {
+            for (Object entry : bxlConfigLoader.getEntries()) {
+                JposEntry jposEntry = (JposEntry) entry;
+                bxlConfigLoader.removeEntry(jposEntry.getLogicalName());
             }
-          }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
-        closePrinter();
-      }else{
-        Toast.makeText(context, "Verifique el estado de la impresora", Toast.LENGTH_SHORT).show();
-        callbackContext.error("ERR_PRT");
-      }
-    }
-  }
 
-  public void print(final Context context,  String name, String address, String content,CallbackContext callbackContext) {
-
-    this.context = context;
-    if (start(context, name, address)) {
-      try {
-        posPrinter.open(logicalName);
-        posPrinter.claim(0);
-        posPrinter.setDeviceEnabled(true);
-        String ESC = new String(new byte[] { 0x1b,0x74,0x10 });
-        //String LF = "\n";
-
-        //posPrinter.setCharacterEncoding(BXLConst.CE_ASCII);
-        posPrinter.printNormal(POSPrinterConst.PTR_S_RECEIPT,ESC+content + "\n");
-       callbackContext.success("EXITOSO");
-
-      } catch (JposException e) {
-        e.printStackTrace();
-        callbackContext.error("aqui el error");
-      } finally {
         try {
-          posPrinter.close();
-        } catch (JposException e) {
-          e.printStackTrace();
+            logicalName = setProductName(name);
+            bxlConfigLoader.addEntry(logicalName, BXLConfigLoader.DEVICE_CATEGORY_POS_PRINTER, logicalName,
+                    BXLConfigLoader.DEVICE_BUS_BLUETOOTH, address);
+
+            bxlConfigLoader.saveFile();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
-      }
+        return true;
     }
-  }
 
-  private String setProductName(String name) {
+    public void printImageBixolon(final Context context, String namePrint, String addressPrint, String pathImage, int width, CallbackContext callbackContext) {
+        String path = Environment.getExternalStorageDirectory().toString() + pathImage;
+        this.context = context;
+        if (start(this.context, namePrint, addressPrint)) {
+            if (openPrinter(callbackContext)) {
+                InputStream is = null;
+                try {
+                    ByteBuffer buffer = ByteBuffer.allocate(4);
+                    buffer.put((byte) POSPrinterConst.PTR_S_RECEIPT);
+                    buffer.put((byte) brightness);
+                    buffer.put((byte) compress);
+                    buffer.put((byte) 0x00);
+                    Log.v("PRINT", path);
+                    posPrinter.printBitmap(buffer.getInt(0), path, width, POSPrinterConst.PTR_BM_CENTER);
+                } catch (JposException e) {
+                    e.printStackTrace();
+                    Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+                } finally {
+                    if (is != null) {
+                        try {
+                            is.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                closePrinter();
+            }
+        }
+    }
 
-    String productName = BXLConfigLoader.PRODUCT_NAME_SPP_R310;
+    public void print(final Context context, String name, String address, String content, CallbackContext callbackContext) {
 
-    return productName;
-  }
+        this.context = context;
+        if (start(context, name, address)) {
 
-  private boolean openPrinter( CallbackContext callbackContext ) {
-    try {
-      posPrinter.open(logicalName);
-      posPrinter.claim(0);
-      posPrinter.setDeviceEnabled(true);
-    } catch (JposException e) {
-      e.printStackTrace();
-      try {
-        posPrinter.close();
-        Toast.makeText(context, "Verifique el estado de la impresora", Toast.LENGTH_SHORT).show();
-        callbackContext.error("ERR_PRT");
+            try {
+                posPrinter.open(logicalName);
+                posPrinter.claim(0);
+                posPrinter.setDeviceEnabled(true);
+
+                String ESC = new String(new byte[]{0x1b, 0x74, 0x10});
+                //String LF = "\n";
+
+                //posPrinter.setCharacterEncoding(BXLConst.CE_ASCII);
+                posPrinter.printNormal(POSPrinterConst.PTR_S_RECEIPT, ESC + content + "\n");
+
+            } catch (JposException e) {
+                e.printStackTrace();
+                callbackContext.error("Verfica el estado de tu impresora, o que esta se encuentre encendida");
+            } finally {
+                try {
+                    posPrinter.close();
+                } catch (JposException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private String setProductName(String name) {
+
+        String productName = BXLConfigLoader.PRODUCT_NAME_SPP_R310;
+
+        return productName;
+    }
+
+    private boolean openPrinter(CallbackContext callbackContext) {
+        try {
+            posPrinter.open(logicalName);
+            posPrinter.claim(0);
+            posPrinter.setDeviceEnabled(true);
+            return true;
+        } catch (JposException e) {
+            e.printStackTrace();
+            callbackContext.error("Verfica el estado de tu impresora, o que esta se encuentre encendida");
+            try {
+                posPrinter.close();
+            } catch (JposException e1) {
+                e1.printStackTrace();
+            }
+        }
         return false;
-      } catch (JposException e1) {
-        e1.printStackTrace();
-        return false;
-      }
     }
-    return true;
-  }
 
-  private void closePrinter() {
-    try {
-      posPrinter.close();
-    } catch (JposException e) {
-      e.printStackTrace();
+    private void closePrinter() {
+        try {
+            posPrinter.close();
+        } catch (JposException e) {
+            e.printStackTrace();
+        }
     }
-  }
 }
